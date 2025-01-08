@@ -25,4 +25,4 @@ This project is a web-based student registration application that allows student
 
 1. **Clone the Repository:**
    ```bash
-   git clone [repository_url]
+   git clone [https://github.com/oshadha2k01/course-registration-application]
