@@ -5,9 +5,6 @@ include '../db/db.php';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $student_id = $_SESSION['student_id'];
     $course_id = $_POST['course_id'];
-    $first_name = $_POST['first_name'];
-    $last_name = $_POST['last_name'];
-    $email = $_POST['email'];
 
     // Check if the student is already enrolled in the course
     $stmt_check_enrollment = $conn->prepare("SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?");
@@ -34,10 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         $student = $result->fetch_assoc();
         
-        // Check if the first name, last name, and email match the student's record
-        if ($student['first_name'] !== $first_name || $student['last_name'] !== $last_name || $student['email'] !== $email) {
-            die("Student details do not match. Please check your entered details.");
-        }
+        
     }
 
     // Insert enrollment data into the enrollments table

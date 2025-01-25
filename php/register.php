@@ -44,46 +44,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows > 0) {
             $email_error = "Email already exists.";
         }
+        $stmt->close();
     }
 
     // Validate password
     if (empty($password)) {
         $password_error = "Password is required.";
-    } elseif (!preg_match("/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[a-zA-Z\d!@#$%^&*]{8,}$/", $password)) {
-        $password_error = "Password must be at least 8 characters long, include 1 digit, 1 uppercase, 1 lowercase, and 1 special character.";
+    } elseif (!preg_match("/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/", $password)) {
+        $password_error = "Password must be at least 8 characters, include one uppercase letter, one lowercase letter, and one number.";
     }
 
-    // Validate confirm password
+    // Confirm password
     if (empty($confirm_password)) {
-        $confirm_password_error = "Please confirm your password.";
+        $confirm_password_error = "Confirm your password.";
     } elseif ($password !== $confirm_password) {
         $confirm_password_error = "Passwords do not match.";
     }
 
-    // If there are no validation errors, proceed to insert data
+    // Process registration if no errors
     if (empty($first_name_error) && empty($last_name_error) && empty($email_error) && empty($password_error) && empty($confirm_password_error)) {
-        // Hash the password for security
+        // Determine user role based on email
+        // If email starts with 'admin', assign role as admin
+        $role = (strpos(strtolower($email), 'admin@studyhub.com') !== false) ? 'admin' : 'user';
+
+        // Hash the password
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-        // Prepare the SQL statement to insert data into the database
-        $stmt = $conn->prepare("INSERT INTO students (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $first_name, $last_name, $email, $hashed_password);
+        // Insert user into the database
+        $stmt = $conn->prepare("INSERT INTO students (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $first_name, $last_name, $email, $hashed_password, $role);
 
         if ($stmt->execute()) {
-            // Success message
-            $success_message = "Registration successful! You can now log in.";
-            // Redirect to login page after 3 seconds with a notification
+            $success_message = "Registration successful! You are registered as a " . strtoupper($role) . ".";
+            // Redirect to login page after 2 seconds with a notification
             echo "<script>
-                setTimeout(function() {
-                    window.location.href = 'login.php';
-                }, 2000);
-              </script>";
+             setTimeout(function() {
+                 window.location.href = 'login.php';
+             }, 2000);
+           </script>";
         } else {
-            $error_message = "Something went wrong. Please try again.";
+            $success_message = "Something went wrong. Please try again.";
         }
+
+        $stmt->close();
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -91,7 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Registration</title>
+    <title>Register</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .error {
@@ -115,59 +122,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .form-header {
             margin-bottom: 20px;
         }
-
-        .input-group-text {
-            cursor: pointer;
-        }
-
-        .register-link {
-            text-decoration: none;
-            color: #007bff;
-        }
-
-        .register-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 
 <body class="d-flex justify-content-center align-items-center" style="min-height: 100vh; background-color: #e9ecef;">
     <div class="form-container">
-        <h2 class="text-center form-header">Student Registration</h2>
+        <h2 class="text-center form-header">Register</h2>
 
-        <!-- Success Notification -->
-        <?php if (!empty($success_message)): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $success_message; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
-        <!-- Error Notification -->
-        <?php if (!empty($error_message)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo $error_message; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
+        <?php
+        if (!empty($success_message)) {
+            echo "<div class='alert alert-success'>$success_message</div>";
+        }
+        ?>
 
         <form method="POST" action="register.php" novalidate>
             <div class="mb-3">
-                <label for="firstName" class="form-label">First Name</label>
-                <input type="text" class="form-control <?php echo !empty($first_name_error) ? 'error' : ''; ?>"
-                    id="firstName" name="first_name" value="<?php echo htmlspecialchars($first_name); ?>" required>
+                <label for="first_name" class="form-label">First Name</label>
+                <input type="text" class="form-control <?php echo !empty($first_name_error) ? 'error' : ''; ?>" id="first_name" name="first_name" value="<?php echo htmlspecialchars($first_name); ?>" required>
                 <div class="error-message"><?php echo $first_name_error; ?></div>
             </div>
             <div class="mb-3">
-                <label for="lastName" class="form-label">Last Name</label>
-                <input type="text" class="form-control <?php echo !empty($last_name_error) ? 'error' : ''; ?>"
-                    id="lastName" name="last_name" value="<?php echo htmlspecialchars($last_name); ?>" required>
+                <label for="last_name" class="form-label">Last Name</label>
+                <input type="text" class="form-control <?php echo !empty($last_name_error) ? 'error' : ''; ?>" id="last_name" name="last_name" value="<?php echo htmlspecialchars($last_name); ?>" required>
                 <div class="error-message"><?php echo $last_name_error; ?></div>
             </div>
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control <?php echo !empty($email_error) ? 'error' : ''; ?>" id="email"
-                    name="email" value="<?php echo htmlspecialchars($email); ?>" required>
+                <input type="email" class="form-control <?php echo !empty($email_error) ? 'error' : ''; ?>" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
                 <div class="error-message"><?php echo $email_error; ?></div>
             </div>
             <div class="mb-3">
